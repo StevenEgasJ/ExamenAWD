@@ -309,10 +309,10 @@ function loadProductsFromManager() {
         
         const productContainer = document.getElementById('products-container');
         
-        if (productContainer) {
-            productContainer.innerHTML = '';
+            if (productContainer) {
+                productContainer.innerHTML = '';
             
-            if (products.length === 0) {
+                if (products.length === 0) {
                 productContainer.innerHTML = `
                     <div class="col-12 text-center py-5">
                         <div class="alert alert-info">
@@ -328,14 +328,28 @@ function loadProductsFromManager() {
             } else {
                 // apply current sort selection
                 products = applySort(products);
-                products.forEach(product => {
-                    const productCard = createProductCard(product);
-                    productContainer.appendChild(productCard);
-                });
+
+                // Render as table or grid depending on currentView
+                if (window._productView === 'table') {
+                    try {
+                        displaySearchResultsAsTable(products);
+                    } catch (e) {
+                        console.warn('displaySearchResultsAsTable failed, falling back to grid', e);
+                        products.forEach(product => {
+                            const productCard = createProductCard(product);
+                            productContainer.appendChild(productCard);
+                        });
+                    }
+                } else {
+                    products.forEach(product => {
+                        const productCard = createProductCard(product);
+                        productContainer.appendChild(productCard);
+                    });
+                }
 
                 // Kick off async reviews caching in background (will re-render when ready)
                 try { initReviewsCache(); } catch (e) { console.warn('initReviewsCache failed to start', e); }
-                
+
                 console.log('✅ Productos renderizados en el contenedor');
             }
         } else {
@@ -397,12 +411,7 @@ function createProductCard(product) {
                         </small>
                     </div>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-secondary" onclick="openProductModal('${product.id || product._id}')">Ver más</button>
-            <button class="btn btn-primary" 
-                onclick="agregarAlCarrito('${product.id}', '${product.nombre}', ${discountedPrice.toFixed(2)}, '${product.imagen}', '${product.capacidad || ''}')"
-                                ${(product.stock || 0) <= 0 ? 'disabled' : ''}>
-                                ${(product.stock || 0) <= 0 ? 'Sin Stock' : 'Agregar al Carrito'}
-                        </button>
+                        <!-- Botones de interacción removidos por solicitud -->
                     </div>
                 </div>
             </div>
@@ -416,7 +425,9 @@ function createProductCard(product) {
 function searchProducts(query) {
     if (typeof productManager !== 'undefined') {
         const results = productManager.searchProducts(query);
-        displaySearchResults(results);
+        // Respect view mode
+        if (window._productView === 'table') displaySearchResultsAsTable(results);
+        else displaySearchResults(results);
     }
 }
 
@@ -445,6 +456,117 @@ function displaySearchResults(products) {
                 productContainer.appendChild(productCard);
             });
         }
+    }
+}
+
+// Mostrar resultados en formato tabla
+function displaySearchResultsAsTable(products) {
+    const productContainer = document.getElementById('products-container');
+    if (!productContainer) return;
+
+    if (products.length === 0) {
+        productContainer.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <i class="fa-solid fa-search fa-2x mb-3"></i>
+                    <h5>No se encontraron productos</h5>
+                    <p>Intenta con otros términos de búsqueda</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Build an improved table markup with image and description
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-responsive';
+
+    let html = `
+        <table class="table table-striped table-hover product-table">
+            <thead>
+                <tr>
+                    <th style="width:70px;">ID</th>
+                    <th style="width:80px;">Imagen</th>
+                    <th>Nombre</th>
+                    <th style="width:120px;">Precio</th>
+                    <th style="width:90px;">Stock</th>
+                    <th style="width:160px;">Categoría</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    products.forEach(p => {
+        const price = Number(p.precio) || 0;
+        const cat = (p.categoria || p.category || '—');
+        const safeName = (p.nombre || '').toString();
+        const img = p.imagen ? `<img src="${p.imagen}" class="product-table-img" alt="${safeName}">` : `<div class="product-table-img placeholder"></div>`;
+        const desc = (p.descripcion || '').toString();
+        const shortDesc = desc.length > 120 ? desc.substring(0, 117).trim() + '...' : desc;
+
+        html += `
+            <tr>
+                <td>${escapeHtml(String(p.id || ''))}</td>
+                <td>${img}</td>
+                <td>${safeName}</td>
+                <td>$${price.toFixed(2)}</td>
+                <td>${Number(p.stock)||0}</td>
+                <td>${cat}</td>
+                <td class="desc-cell" title="${escapeHtml(desc)}">${escapeHtml(shortDesc)}</td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
+    tableWrapper.innerHTML = html;
+
+    productContainer.innerHTML = '';
+    // Wrap in a column for layout consistency
+    const col = document.createElement('div');
+    col.className = 'col-12';
+    col.appendChild(tableWrapper);
+    productContainer.appendChild(col);
+}
+
+// small helper to escape HTML in titles/cells
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Helper used by the table detail button — reuse modal if available
+function showProductDetail(productId) {
+    try {
+        const product = productManager.getProductById(productId);
+        if (!product) return;
+
+        // If modal exists, fill and show it (modal IDs present in index.html)
+        const modalTitle = document.getElementById('modalProductTitle');
+        const modalImage = document.getElementById('modalProductImage');
+        const modalPrice = document.getElementById('modalProductPrice');
+        const modalStock = document.getElementById('modalProductStock');
+        const modalDesc = document.getElementById('modalProductDescription');
+
+        if (modalTitle) modalTitle.textContent = product.nombre || 'Producto';
+        if (modalImage) modalImage.src = product.imagen || '';
+        if (modalPrice) modalPrice.textContent = '$' + (Number(product.precio)||0).toFixed(2);
+        if (modalStock) modalStock.textContent = 'Stock: ' + (Number(product.stock)||0);
+        if (modalDesc) modalDesc.textContent = product.descripcion || '';
+
+        // show bootstrap modal
+        const modalEl = document.getElementById('productDetailModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    } catch (err) {
+        console.warn('showProductDetail error', err);
     }
 }
 
@@ -490,7 +612,9 @@ function filterByCategory(category, btnEl) {
         const products = category === 'all' ? 
             productManager.getAllProducts() : 
             productManager.getProductsByCategory(category);
-        displaySearchResults(products);
+        // Respect current view when filtering
+        if (window._productView === 'table') displaySearchResultsAsTable(products);
+        else displaySearchResults(products);
     }
 
     // Actualizar botones activos (solo si el contenedor de filtros existe)
@@ -514,26 +638,78 @@ function initializeSearch() {
     const searchBtn = document.getElementById('search-btn');
     
     if (searchInput && searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            const query = searchInput.value.trim();
-            if (query) {
-                searchProducts(query);
-            } else {
+        const getSearchBy = () => (document.getElementById('search-by') ? document.getElementById('search-by').value : 'all');
+
+        const performSearch = () => {
+            const queryRaw = searchInput.value || '';
+            const query = String(queryRaw).trim();
+            const searchBy = getSearchBy();
+
+            if (!query) {
                 loadProductsFromManager();
+                return;
             }
-        });
-        
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const query = searchInput.value.trim();
-                if (query) {
-                    searchProducts(query);
-                } else {
-                    loadProductsFromManager();
+
+            // Defensive: ensure productManager exists
+            if (typeof productManager === 'undefined') {
+                searchProducts(query);
+                return;
+            }
+
+            const q = query.toLowerCase();
+            let results = [];
+
+            try {
+                switch (searchBy) {
+                    case 'name':
+                        results = productManager.getAllProducts().filter(p => (p.nombre||'').toString().toLowerCase().includes(q));
+                        break;
+                    case 'category':
+                        results = productManager.getAllProducts().filter(p => ((p.categoria||p.category||'').toString().toLowerCase().includes(q)));
+                        break;
+                    case 'code':
+                        results = productManager.getAllProducts().filter(p => String(p.id||'').toLowerCase().includes(q));
+                        break;
+                    default:
+                        // 'all' or unknown -> use existing broad search
+                        results = productManager.searchProducts(query);
+                        break;
                 }
+            } catch (err) {
+                console.warn('initializeSearch.performSearch error:', err);
+                results = productManager.searchProducts(query);
             }
+
+            // Respect view mode when showing search results
+            if (window._productView === 'table') displaySearchResultsAsTable(results);
+            else displaySearchResults(results);
+        };
+
+        searchBtn.addEventListener('click', performSearch);
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
         });
     }
+
+    // Initialize table toggle button
+    try {
+        const toggleBtn = document.getElementById('toggle-table-view');
+        if (toggleBtn) {
+            // default view: tabla automática según petición
+            window._productView = window._productView || 'table';
+            const updateBtnText = () => {
+                toggleBtn.innerHTML = window._productView === 'table' ? '<i class="fa-solid fa-grip-horizontal"></i> Ver como tarjetas' : '<i class="fa-solid fa-table-list"></i> Ver como tabla';
+            };
+            updateBtnText();
+            toggleBtn.addEventListener('click', () => {
+                window._productView = window._productView === 'table' ? 'grid' : 'table';
+                updateBtnText();
+                // re-render current products
+                try { loadProductsFromManager(); } catch (e) { console.warn('reload after toggle failed', e); }
+            });
+        }
+    } catch (e) { console.warn('toggle init failed', e); }
 }
 
 // Cargar categorías desde la API y poblar el select #category-select

@@ -590,6 +590,87 @@ main.flex-grow-1 {
     }
 }
 
+/* Estilos para la tabla de productos */
+.product-table-img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+}
+.product-table-img.placeholder {
+    background: #f0f0f0;
+    border: 1px dashed #ddd;
+}
+.product-table .desc-cell {
+    max-width: 560px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.product-table thead th { vertical-align: middle; }
+.product-table tbody tr td { vertical-align: middle; }
+
+/* Aumentar horizontalmente los controles de búsqueda/orden/categoría en escritorio */
+#search-by, #sort-select, #category-select {
+    min-width: 200px !important;
+    max-width: 360px !important;
+    width: auto !important;
+}
+
+/* Botón buscar un poco más ancho */
+#search-btn {
+    min-width: 140px !important;
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
+}
+
+/* Asegurar que el toggle no empuje demasiado en pantallas grandes */
+#toggle-table-view {
+    min-width: 140px !important;
+}
+
+@media (max-width: 767.98px) {
+    /* En móviles, volver a 100% para evitar solapamientos */
+    #search-by, #sort-select, #category-select, #search-btn, #toggle-table-view {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+}
+
+/* Añadir padding y separación entre controles para mejorar legibilidad */
+.input-group {
+    gap: 0.5rem; /* espacio entre elementos dentro del grupo */
+}
+
+#search-by, #sort-select, #category-select {
+    padding: 0.45rem 0.7rem !important;
+    margin-right: 0.4rem !important;
+}
+
+#search-btn, #toggle-table-view {
+    padding: 0.45rem 0.9rem !important;
+    margin-left: 0.2rem !important;
+}
+
+@media (max-width: 767.98px) {
+    .input-group { gap: 0.4rem; }
+    #search-by, #sort-select, #category-select { margin-right: 0 !important; padding: 0.5rem !important; }
+    #search-btn, #toggle-table-view { margin-left: 0 !important; padding: 0.55rem !important; }
+}
+
+/* Remove gap/padding specifically between the core search controls: input, search-by, search-btn */
+.search-core {
+    gap: 0 !important;
+    align-items: stretch;
+}
+.search-core > * {
+    margin: 0 !important;
+    border-radius: 0 !important; /* make them visually contiguous */
+}
+.search-core > :first-child { border-top-left-radius: .375rem !important; border-bottom-left-radius: .375rem !important; }
+.search-core > :last-child { border-top-right-radius: .375rem !important; border-bottom-right-radius: .375rem !important; }
+
 /* Estilos para alertas en modales */
 .swal2-container .alert {
     border-radius: 8px;
@@ -644,4 +725,82 @@ body.dark-mode #locationStatus .alert-info {
 body.dark-mode #locationStatus .alert-warning {
     background: linear-gradient(135deg, #5f4e1e, #7a6a2d);
     color: #fff3cd;
+}
+
+/* Hacer los botones ligeramente más grandes para evitar cortado de texto */
+.btn, .btn-outline-secondary, .btn-outline-primary, .btn-1, .btn-2 {
+    font-size: 1rem !important;
+    padding: 0.5rem 0.9rem !important;
+    min-width: 90px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}
+
+/* Aumentar tamaño de botones pequeños también */
+.btn-sm {
+    font-size: 0.95rem !important;
+    padding: 0.35rem 0.6rem !important;
+    min-width: 70px !important;
+}
+
+/* Botones dentro de input-group (buscar/ordenar) deben ajustarse pero ser responsivos */
+.input-group .btn {
+    min-width: 100px !important;
+}
+
+@media (max-width: 767.98px) {
+    /* En móviles permitir que los botones ocupen todo el ancho y permitan wrapping para textos largos */
+    .btn, .btn-outline-secondary, .btn-outline-primary, .btn-1, .btn-2 {
+        width: 100% !important;
+        min-width: 0 !important;
+        white-space: normal !important;
+        display: block !important;
+    }
+
+    .input-group .btn {
+        margin-top: 0 !important;
+    }
+}
+
+/* --- Forzar tamaño de la barra de búsqueda y comportamiento responsive --- */
+#search-input {
+    min-width: 320px !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+}
+
+#search-by {
+    max-width: 260px !important;
+    min-width: 140px !important;
+}
+
+/* Asegurar que dentro del input-group el campo ocupe el espacio disponible */
+.input-group > .form-control {
+    flex: 1 1 auto !important;
+    min-width: 200px !important;
+}
+
+/* En pantallas pequeñas dar prioridad al input y apilar los controles */
+@media (max-width: 767.98px) {
+    .input-group {
+        flex-direction: column !important;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+
+    #search-input {
+        min-width: auto !important;
+        width: 100% !important;
+    }
+
+    #search-by, #sort-select, #category-select {
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+    }
+
+    /* Botón de búsqueda más consistente en móviles */
+    #search-btn {
+        width: 100% !important;
+    }
 }
