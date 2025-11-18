@@ -23,6 +23,23 @@
     }
 })();
 
+// Ensure default product view is table as early as possible so initial render uses table
+window._productView = window._productView || 'table';
+
+// Helper: fetch with simple retry/backoff to reduce transient NetworkError logs
+async function fetchWithRetry(url, options = {}, retries = 2, delay = 500) {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res;
+        } catch (err) {
+            if (i === retries) throw err;
+            await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+        }
+    }
+}
+
 document.addEventListener("DOMContentLoaded", async function() {
     // Inicializar sistemas principales
     actualizarCarritoUI();
@@ -216,9 +233,14 @@ async function initReviewsCache() {
 
     try {
         // Attempt to fetch all reviews via admin endpoint (returns all reviews). This endpoint is present in the repo.
-        const res = await fetch('/api/reviews/admin/all');
-        if (!res.ok) throw new Error('Reviews fetch failed: ' + res.status);
-        const all = await res.json();
+        let all = [];
+        try {
+            const res = await fetchWithRetry('/api/reviews/admin/all', {}, 2, 400);
+            all = await res.json();
+        } catch (err) {
+            console.warn('initReviewsCache: reviews fetch failed after retries:', err);
+            all = [];
+        }
         // Build map: { productId: { avg: Number, count: Number } }
         const map = {};
         (all || []).forEach(r => {
@@ -720,14 +742,19 @@ async function initializeCategories() {
     // Asegurar la opción por defecto
     select.innerHTML = '<option value="all">Categoría: Todas</option>';
 
-    try {
+        try {
         let categories = [];
         if (window.api && typeof window.api.getCategories === 'function') {
             categories = await window.api.getCategories();
         } else {
             // Fallback directo por si no está el cliente
-            const res = await fetch('/api/categories');
-            if (res.ok) categories = await res.json();
+            try {
+                const res = await fetchWithRetry('/api/categories', {}, 2, 400);
+                categories = await res.json();
+            } catch (err) {
+                console.warn('initializeCategories: categories fetch failed after retries:', err);
+                categories = [];
+            }
         }
 
         if (!Array.isArray(categories)) categories = [];

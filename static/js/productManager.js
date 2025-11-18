@@ -310,6 +310,50 @@ class ProductManager {
         console.log(`✅ Stock disponible para ${product.nombre}`);
         return { available: true, currentStock: currentStock };
     }
+
+    // Inicializar productos por defecto en localStorage cuando no hay productos disponibles
+    initializeDefaultProducts() {
+        try {
+            const stored = localStorage.getItem('productos');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log('initializeDefaultProducts: productos ya presentes, omitiendo inicialización');
+                    return this.products;
+                }
+            }
+
+            const defaults = [
+                {
+                    id: 'demo-001',
+                    nombre: 'Producto Demo 1',
+                    descripcion: 'Producto de ejemplo para mostrar la tienda localmente.',
+                    precio: 9.99,
+                    stock: 50,
+                    categoria: 'Promoción',
+                    imagen: ''
+                },
+                {
+                    id: 'demo-002',
+                    nombre: 'Producto Demo 2',
+                    descripcion: 'Segundo producto de ejemplo.',
+                    precio: 19.99,
+                    stock: 20,
+                    categoria: 'Nuevos',
+                    imagen: ''
+                }
+            ];
+
+            this.products = defaults.map(p => ({ ...p }));
+            localStorage.setItem('productos', JSON.stringify(this.products));
+            console.log('✅ initializeDefaultProducts: productos por defecto añadidos a localStorage');
+            try { window.dispatchEvent(new Event('productsUpdated')); } catch (e) {}
+            return this.products;
+        } catch (err) {
+            console.warn('initializeDefaultProducts failed:', err);
+            return this.products;
+        }
+    }
 }
 
 // Exportar instancia global
